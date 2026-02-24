@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>WordQuest ⚔️</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07070f;
+    --card: rgba(16,12,28,0.97);
+    --gold: #fbbf24;
+    --orange: #f97316;
+    --purple: #7c3aed;
+    --purple-light: #a78bfa;
+    --green: #4ade80;
+    --red: #f87171;
+    --text: #e8d5a3;
+    --muted: #9ca3af;
+    --dim: #6b7280;
+    --border: rgba(139,92,246,0.3);
+    --border-o: rgba(251,146,60,0.3);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Crimson Text', Georgia, serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  #stars {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  }
+
+  .star {
+    position: absolute; width: 2px; height: 2px;
+    background: #fff; border-radius: 50%;
+    animation: twinkle var(--d) ease-in-out infinite;
+  }
+  @keyframes twinkle {
+    0%,100% { opacity: var(--o); }
+    50% { opacity: calc(var(--o) * 0.15); }
+  }
+
+  #app {
+    min-height: 100vh;
+    background: radial-gradient(ellipse at 20% 10%, rgba(26,10,46,0.8) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 90%, rgba(13,26,10,0.6) 0%, transparent 60%);
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: 16px;
+    position: relative; z-index: 1;
+  }
+
+  .screen { display: none; width: 100%; max-width: 440px; animation: fadeUp .35s ease; }
+  .screen.active { display: flex; flex-direction: column; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 0 60px rgba(124,58,237,0.12), 0 20px 50px rgba(0,0,0,0.6);
+    width: 100%;
+  }
+
+  /* ── TYPOGRAPHY ── */
+  .cinzel { font-family: 'Cinzel', serif; }
+
+  .game-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(2rem,8vw,3rem);
+    font-weight: 900;
+    text-align: center;
+    color: var(--gold);
+    letter-spacing: 6px;
+    text-shadow: 0 0 30px rgba(251,191,36,0.5);
+  }
+
+  .game-sub {
+    font-family: 'Crimson Text', serif;
+    font-style: italic;
+    font-size: 1rem;
+    color: var(--muted);
+    text-align: center;
+    letter-spacing: 2px;
+    margin-top: 6px;
+  }
+
+  .section-label {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+
+  /* ── INPUTS ── */
+  input[type=text] {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    color: var(--text);
+    font-family: 'Cinzel', serif;
+    font-size: 1.1rem;
+    letter-spacing: 4px;
+    text-align: center;
+    outline: none;
+    transition: border-color .2s;
+    margin-bottom: 14px;
+  }
+  input[type=text]:focus { border-color: var(--orange); }
+  input[type=text]::placeholder { color: var(--dim); }
+
+  /* ── BUTTONS ── */
+  .btn {
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 16px;
+    border: none; border-radius: 10px;
+    cursor: pointer;
+    transition: transform .15s, box-shadow .15s;
+    width: 100%; font-size: 1rem;
+  }
+  .btn:active { transform: scale(.97); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(124,58,237,0.4);
+  }
+  .btn-primary:hover { box-shadow: 0 6px 28px rgba(124,58,237,0.6); }
+
+  .btn-answer {
+    background: linear-gradient(135deg, rgba(30,20,50,.9), rgba(20,14,34,.9));
+    color: var(--text);
+    border: 1px solid var(--border);
+    font-size: 1rem; padding: 15px;
+    margin-bottom: 9px; text-align: center;
+    transition: border-color .2s, background .2s, transform .15s;
+  }
+  .btn-answer:hover:not(:disabled) {
+    border-color: var(--orange);
+    background: linear-gradient(135deg, rgba(251,146,60,.12), rgba(124,58,237,.12));
+    color: var(--gold);
+  }
+  .btn-answer.correct {
+    border-color: var(--green) !important;
+    background: linear-gradient(135deg, rgba(74,222,128,.2), rgba(34,197,94,.08)) !important;
+    color: var(--green) !important;
+    animation: popGreen .4s ease;
+  }
+  .btn-answer.wrong {
+    border-color: var(--red) !important;
+    background: linear-gradient(135deg, rgba(248,113,113,.2), rgba(220,38,38,.08)) !important;
+    color: var(--red) !important;
+    animation: shakeX .4s ease;
+  }
+
+  @keyframes popGreen { 0%,100%{transform:scale(1)} 50%{transform:scale(1.02)} }
+  @keyframes shakeX   { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+
+  /* ── DIVIDER ── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(139,92,246,.4), transparent);
+    margin: 16px 0;
+  }
+
+  /* ── HP / XP BARS ── */
+  .bar-track { width:100%; background: rgba(255,255,255,.08); border-radius:6px; overflow:hidden; }
+  .bar-fill   { height:100%; border-radius:6px; transition: width .5s ease; }
+  .bar-player { background: linear-gradient(90deg,#4ade80,#22c55e); }
+  .bar-monster{ background: linear-gradient(90deg,#f97316,#ef4444); }
+  .bar-xp     { background: linear-gradient(90deg,#818cf8,#6366f1); }
+
+  /* ── BADGES ── */
+  .badge {
+    font-family:'Cinzel',serif; font-size:11px;
+    border-radius:20px; padding:3px 10px;
+    border:1px solid; display:inline-block;
+  }
+  .badge-level { color:var(--gold); border-color:rgba(251,191,36,.3); background:rgba(251,191,36,.1); }
+  .badge-combo { color:var(--green); border-color:rgba(74,222,128,.3); background:rgba(74,222,128,.1); }
+
+  /* ── MONSTER ── */
+  #monster-emoji {
+    font-size: clamp(5rem,18vw,6rem);
+    display: block; text-align: center;
+    animation: float 3s ease-in-out infinite;
+    filter: drop-shadow(0 0 20px rgba(248,113,113,.35));
+    transition: transform .1s;
+  }
+  @keyframes float {
+    0%,100%{ transform: translateY(0) rotate(-1.5deg); }
+    50%    { transform: translateY(-12px) rotate(1.5deg); }
+  }
+  .monster-shake { animation: monShake .35s ease !important; }
+  @keyframes monShake {
+    0%,100%{transform:translateX(0)}
+    20%{transform:translateX(-10px)}
+    40%{transform:translateX(10px)}
+    60%{transform:translateX(-6px)}
+    80%{transform:translateX(6px)}
+  }
+  .player-shake { animation: playerShakeAnim .35s ease; }
+  @keyframes playerShakeAnim {
+    0%,100%{transform:translateX(0)}
+    25%{transform:translateX(-5px)}
+    75%{transform:translateX(5px)}
+  }
+
+  /* ── DAMAGE POPUP ── */
+  .dmg-popup {
+    position: absolute; left:50%; transform:translateX(-50%);
+    font-family:'Cinzel',serif; font-weight:900; font-size:2rem;
+    pointer-events:none; z-index:20;
+    animation: dmgFloat .9s ease forwards;
+  }
+  @keyframes dmgFloat {
+    0%  { opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
+    100%{ opacity:0; transform:translateX(-50%) translateY(-70px) scale(1.5); }
+  }
+
+  /* ── WORD CARD ── */
+  .word-card {
+    background: rgba(251,146,60,.06);
+    border:1px solid var(--border-o);
+    border-radius:12px; padding:14px;
+    text-align:center; margin:14px 0;
+  }
+  .word-emoji-big { font-size:2.6rem; display:block; margin-bottom:4px; }
+  .word-he {
+    font-family:'Cinzel',serif; font-weight:900;
+    font-size:clamp(1.4rem,6vw,1.8rem);
+    color:var(--gold); letter-spacing:4px;
+  }
+
+  /* ── CLASS CARD ── */
+  .class-card {
+    background: var(--card);
+    border:1px solid var(--border);
+    border-radius:12px; padding:16px;
+    cursor:pointer; margin-bottom:12px;
+    transition: border-color .2s, background .2s, transform .15s;
+    display:flex; align-items:center; gap:14px;
+  }
+  .class-card:hover, .class-card.selected {
+    border-color: var(--orange);
+    background: linear-gradient(135deg,rgba(251,146,60,.1),rgba(124,58,237,.1));
+    transform: translateX(-4px);
+  }
+  .class-emoji { font-size:2.4rem; }
+  .class-name { font-family:'Cinzel',serif; font-size:1rem; color:var(--gold); letter-spacing:2px; }
+  .class-desc { font-size:.85rem; color:var(--muted); font-style:italic; margin-top:2px; }
+  .class-bonus { font-size:.75rem; color:var(--dim); margin-top:4px; }
+
+  /* ── STAT DOTS ── */
+  .stat-dots { display:flex; gap:4px; align-items:center; }
+  .dot { width:9px; height:9px; border-radius:50%; }
+  .dot-on  { opacity:1; }
+  .dot-off { background:rgba(255,255,255,.12) !important; }
+
+  /* ── RESULT ── */
+  .result-emoji { font-size:5rem; display:block; text-align:center; animation:bounceIn .5s ease; }
+  @keyframes bounceIn { 0%{transform:scale(.3);opacity:0} 60%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
+  .result-title { font-family:'Cinzel',serif; font-size:2rem; font-weight:900; text-align:center; margin:10px 0 6px; }
+
+  .reward-row { display:flex; gap:10px; justify-content:center; margin:16px 0; }
+  .reward-badge {
+    background:rgba(255,255,255,.04);
+    border:1px solid var(--border);
+    border-radius:12px; padding:12px 18px;
+    text-align:center; min-width:80px;
+  }
+  .reward-val { font-family:'Cinzel',serif; font-size:1.4rem; display:block; }
+  .reward-label { font-size:11px; color:var(--dim); margin-top:2px; display:block; }
+
+  .levelup-banner {
+    background:rgba(251,191,36,.08);
+    border:1px solid rgba(251,191,36,.35);
+    border-radius:12px; padding:14px;
+    text-align:center; margin:12px 0;
+  }
+  .levelup-title { font-family:'Cinzel',serif; font-size:1.1rem; color:var(--gold); }
+  .levelup-sub   { font-size:.85rem; color:var(--green); margin-top:4px; }
+
+  /* ── STAT ROW ── */
+  .srow { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+  .slabel { font-family:'Cinzel',serif; font-size:10px; color:var(--dim); letter-spacing:2px; text-transform:uppercase; }
+  .sval   { font-family:'Cinzel',serif; font-size:11px; color:var(--gold); }
+  .sval.low { color:var(--red); animation:pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+
+  .footer-text { text-align:center; font-size:.75rem; color:var(--dim); margin-top:8px; }
+
+  /* ── STORY TEXT ── */
+  .story {
+    font-style:italic; color:var(--muted);
+    font-size:.95rem; text-align:center;
+    line-height:1.7; margin:12px 0 20px;
+  }
+
+  /* ── LOGO ── */
+  .logo-wrap { text-align:center; margin-bottom:28px; }
+  .logo-sword { font-size:3.5rem; display:block; animation:swordGlow 3s ease-in-out infinite; }
+  @keyframes swordGlow {
+    0%,100%{ filter:drop-shadow(0 0 8px rgba(251,191,36,.4)); }
+    50%    { filter:drop-shadow(0 0 22px rgba(251,191,36,.9)); }
+  }
+
+  /* scroll on small screens */
+  .scrollable { overflow-y:auto; max-height:100vh; padding:16px 0; }
+
+  .version { text-align:center; font-size:11px; color:var(--dim); letter-spacing:2px; margin-top:16px; }
+</style>
+</head>
+<body>
+
+<div id="stars"></div>
+<div id="app">
+
+  <!-- ══ SCREEN: INTRO ══ -->
+  <div id="s-intro" class="screen active">
+    <div class="logo-wrap">
+      <span class="logo-sword">⚔️</span>
+      <div class="game-title">WORDQUEST</div>
+      <div class="game-sub">לְמַד אַנְגְּלִית · נְצַח מִפְלָצוֹת · הָפוֹךְ לְאַגָּדָה</div>
+    </div>
+    <div class="card">
+      <div class="section-label">שם הגיבור שלך</div>
+      <input type="text" id="name-input" placeholder="Hero" maxlength="16" autocomplete="off">
+      <div class="divider"></div>
+      <p class="story">
+        בממלכת <span style="color:var(--gold);font-family:'Cinzel',serif">Lingoria</span>,
+        כל מילה אנגלית שתלמד תהפוך לכוח.<br>הלחם. שלם. נצח.
+      </p>
+      <button class="btn btn-primary" onclick="goToClass()">⚔️ &nbsp; התחל הרפתקה</button>
+    </div>
+    <div class="version">WordQuest v0.1 – MVP</div>
+  </div>
+
+  <!-- ══ SCREEN: CLASS SELECT ══ -->
+  <div id="s-class" class="screen scrollable">
+    <div style="max-width:440px;width:100%;margin:0 auto;padding-bottom:20px">
+      <div class="game-title" style="font-size:1.8rem;margin-bottom:4px">בחר דמות</div>
+      <div class="game-sub" id="class-sub" style="margin-bottom:24px"></div>
+      <div id="class-list"></div>
+      <button class="btn btn-primary" id="btn-start" style="opacity:.4;pointer-events:none" onclick="startGame()">
+        🗡️ &nbsp; יצא לקרב!
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ SCREEN: BATTLE ══ -->
+  <div id="s-battle" class="screen">
+    <div style="max-width:440px;width:100%;display:flex;flex-direction:column;gap:10px">
+
+      <!-- Player panel -->
+      <div class="card" id="player-panel">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span class="cinzel" style="color:var(--gold);font-size:.95rem;flex:1" id="p-name-display"></span>
+          <span class="badge badge-level" id="p-level-badge"></span>
+          <span class="badge badge-combo" id="p-combo-badge" style="display:none"></span>
+        </div>
+        <div class="srow">
+          <span class="slabel">HP</span>
+          <span class="sval" id="p-hp-val"></span>
+        </div>
+        <div class="bar-track" style="height:8px;margin-bottom:8px"><div class="bar-fill bar-player" id="p-hp-bar" style="height:8px"></div></div>
+        <div class="srow">
+          <span class="slabel" style="font-size:9px">XP</span>
+          <span class="sval" style="font-size:10px;color:var(--purple-light)" id="p-xp-val"></span>
+        </div>
+        <div class="bar-track" style="height:5px"><div class="bar-fill bar-xp" id="p-xp-bar" style="height:5px"></div></div>
+      </div>
+
+      <!-- Monster -->
+      <div style="text-align:center;position:relative;padding:8px 0">
+        <div id="dmg-container" style="position:relative;display:inline-block"></div>
+        <span id="monster-emoji">👺</span>
+        <div class="cinzel" style="color:var(--red);font-size:1.1rem;letter-spacing:2px;margin:4px 0" id="m-name"></div>
+        <div class="srow" style="justify-content:center;gap:16px">
+          <span class="sval" style="color:var(--orange);font-size:.85rem" id="m-hp-val"></span>
+        </div>
+        <div class="bar-track" style="height:8px;margin-top:4px"><div class="bar-fill bar-monster" id="m-hp-bar" style="height:8px"></div></div>
+      </div>
+
+      <!-- Word -->
+      <div class="word-card">
+        <div class="section-label">תרגם את המילה לאנגלית</div>
+        <span class="word-emoji-big" id="w-emoji"></span>
+        <span class="word-he" id="w-he"></span>
+      </div>
+
+      <!-- Answers -->
+      <div id="answers-container"></div>
+
+      <div class="footer-text" id="battle-footer"></div>
+    </div>
+  </div>
+
+  <!-- ══ SCREEN: RESULT ══ -->
+  <div id="s-result" class="screen">
+    <div class="card" style="text-align:center;max-width:440px;width:100%">
+      <span class="result-emoji" id="r-emoji"></span>
+      <div class="result-title" id="r-title"></div>
+      <p class="story" id="r-sub"></p>
+      <div id="r-levelup" style="display:none" class="levelup-banner">
+        <div style="font-size:1.8rem">⭐</div>
+        <div class="levelup-title" id="r-levelup-title"></div>
+        <div class="levelup-sub">+25 HP הוחזרו · +10 MaxHP</div>
+      </div>
+      <div class="reward-row" id="r-rewards"></div>
+      <div class="divider"></div>
+      <button class="btn btn-primary" id="r-btn" onclick="nextRound()"></button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════
+
+const WORDS = [
+  { he:'כֶּלֶב',   en:'Dog',     emoji:'🐕', opts:['Cat','Dog','Bird','Fish']      },
+  { he:'חָתוּל',   en:'Cat',     emoji:'🐈', opts:['Dog','Cat','Horse','Bear']     },
+  { he:'תַּפּוּחַ', en:'Apple',   emoji:'🍎', opts:['Apple','Banana','Orange','Grape']},
+  { he:'בַּיִת',   en:'House',   emoji:'🏠', opts:['School','House','Car','Tree']  },
+  { he:'סֵפֶר',    en:'Book',    emoji:'📚', opts:['Book','Pen','Bag','Table']     },
+  { he:'מַיִם',    en:'Water',   emoji:'💧', opts:['Fire','Water','Earth','Air']   },
+  { he:'שֶׁמֶשׁ',  en:'Sun',     emoji:'☀️', opts:['Moon','Star','Sun','Cloud']   },
+  { he:'אֵשׁ',     en:'Fire',    emoji:'🔥', opts:['Water','Fire','Ice','Wind']    },
+  { he:'חֶרֶב',    en:'Sword',   emoji:'⚔️', opts:['Shield','Sword','Bow','Staff']},
+  { he:'מֶלֶךְ',   en:'King',    emoji:'👑', opts:['Queen','King','Knight','Wizard']},
+  { he:'דְּרָקוֹן', en:'Dragon', emoji:'🐉', opts:['Dragon','Wolf','Bear','Eagle'] },
+  { he:'יַעַר',    en:'Forest',  emoji:'🌲', opts:['Desert','Forest','Ocean','Mountain']},
+  { he:'זָהָב',    en:'Gold',    emoji:'🪙', opts:['Silver','Gold','Iron','Wood']  },
+  { he:'לֵב',      en:'Heart',   emoji:'❤️', opts:['Heart','Star','Moon','Sun']   },
+  { he:'שָׁמַיִם', en:'Sky',     emoji:'🌌', opts:['Sea','Sky','Land','Cave']      },
+  { he:'זְאֵב',    en:'Wolf',    emoji:'🐺', opts:['Wolf','Fox','Bear','Lion']     },
+  { he:'לַיְלָה',  en:'Night',   emoji:'🌙', opts:['Day','Night','Dawn','Dusk']   },
+  { he:'קֶסֶם',    en:'Magic',   emoji:'✨', opts:['Magic','Power','Skill','Luck'] },
+  { he:'מָגֵן',    en:'Shield',  emoji:'🛡️', opts:['Shield','Armor','Helm','Cape']},
+  { he:'אֶבֶן',    en:'Stone',   emoji:'🪨', opts:['Stone','Wood','Metal','Glass'] },
+];
+
+const MONSTERS = [
+  { name:'Goblin Scout',  emoji:'👺', baseHp:40,  xp:30,  minLv:1 },
+  { name:'Cave Troll',    emoji:'🧌', baseHp:70,  xp:60,  minLv:2 },
+  { name:'Skeleton Mage', emoji:'💀', baseHp:90,  xp:90,  minLv:3 },
+  { name:'Dark Wizard',   emoji:'🧙', baseHp:115, xp:120, minLv:4 },
+  { name:'Werewolf',      emoji:'🐺', baseHp:140, xp:160, minLv:5 },
+  { name:'Fire Drake',    emoji:'🔥', baseHp:170, xp:210, minLv:6 },
+  { name:'Dragon Lord',   emoji:'🐲', baseHp:210, xp:280, minLv:8 },
+];
+
+const CLASSES = [
+  { name:'Warrior', emoji:'⚔️', desc:'חזק ועמיד – בנוי להישרדות', bonusDmg:5,  bonusHp:30, color:'#f97316', stats:[4,5,2] },
+  { name:'Mage',    emoji:'🔮', desc:'חכם וקטלני – נזק עצום',     bonusDmg:22, bonusHp:0,  color:'#a78bfa', stats:[5,2,4] },
+  { name:'Archer',  emoji:'🏹', desc:'מהיר ומדויק – מאוזן',        bonusDmg:13, bonusHp:15, color:'#4ade80', stats:[3,3,5] },
+];
+
+const STAT_LABELS = ['כוח','הגנה','מהירות'];
+
+// ═══════════════════════════════════════════
+// GAME STATE
+// ═══════════════════════════════════════════
+
+let G = {};
+
+function resetGame() {
+  G = {
+    playerName: '', playerClass: null,
+    hp:0, maxHp:0, xp:0, xpToLevel:100, level:1, kills:0,
+    monster: null, word: null, answers: [],
+    combo: 0, answering: false, gameOver: false,
+  };
+}
+resetGame();
+
+// ═══════════════════════════════════════════
+// STARS
+// ═══════════════════════════════════════════
+(function createStars() {
+  const c = document.getElementById('stars');
+  for (let i=0; i<70; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    s.style.cssText = `left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${(2+Math.random()*5).toFixed(1)}s;--o:${(0.15+Math.random()*0.7).toFixed(2)};animation-delay:${(Math.random()*5).toFixed(1)}s`;
+    c.appendChild(s);
+  }
+})();
+
+// ═══════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(id);
+  el.classList.add('active');
+  // re-trigger animation
+  el.style.animation='none'; el.offsetHeight; el.style.animation='';
+}
+
+// ═══════════════════════════════════════════
+// INTRO → CLASS
+// ═══════════════════════════════════════════
+function goToClass() {
+  G.playerName = document.getElementById('name-input').value.trim() || 'Hero';
+  document.getElementById('class-sub').textContent = `${G.playerName}, מי תהיה בממלכת Lingoria?`;
+  buildClassList();
+  showScreen('s-class');
+}
+
+function buildClassList() {
+  const wrap = document.getElementById('class-list');
+  wrap.innerHTML = '';
+  CLASSES.forEach((cls,i) => {
+    const div = document.createElement('div');
+    div.className = 'class-card';
+    div.id = `cls-${i}`;
+    div.innerHTML = `
+      <div class="class-emoji">${cls.emoji}</div>
+      <div style="flex:1">
+        <div class="class-name" style="color:${cls.color}">${cls.name}</div>
+        <div class="class-desc">${cls.desc}</div>
+        <div class="class-bonus">+${cls.bonusDmg} נזק &nbsp;·&nbsp; +${cls.bonusHp} HP</div>
+        <div style="display:flex;gap:14px;margin-top:8px">
+          ${STAT_LABELS.map((l,j)=>`
+            <div>
+              <div style="font-size:9px;color:var(--dim);font-family:'Cinzel',serif;letter-spacing:1px;margin-bottom:4px">${l}</div>
+              <div class="stat-dots">${[1,2,3,4,5].map(n=>`<div class="dot ${n<=cls.stats[j]?'dot-on':'dot-off'}" style="background:${cls.color}"></div>`).join('')}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+    `;
+    div.onclick = () => selectClass(i);
+    wrap.appendChild(div);
+  });
+}
+
+function selectClass(i) {
+  document.querySelectorAll('.class-card').forEach(c=>c.classList.remove('selected'));
+  document.getElementById(`cls-${i}`).classList.add('selected');
+  G.playerClass = CLASSES[i];
+  const btn = document.getElementById('btn-start');
+  btn.style.opacity='1'; btn.style.pointerEvents='all';
+}
+
+// ═══════════════════════════════════════════
+// START GAME
+// ═══════════════════════════════════════════
+function startGame() {
+  if (!G.playerClass) return;
+  G.maxHp = 100 + G.playerClass.bonusHp;
+  G.hp = G.maxHp;
+  G.xp = 0; G.xpToLevel = 100; G.level = 1; G.kills = 0;
+  G.combo = 0; G.gameOver = false;
+  loadBattle();
+  showScreen('s-battle');
+}
+
+// ═══════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════
+function shuffle(arr) { return [...arr].sort(()=>Math.random()-.5); }
+function randWord() { return WORDS[Math.floor(Math.random()*WORDS.length)]; }
+function getMonster(level) {
+  const elig = MONSTERS.filter(m=>m.minLv<=level);
+  const base = elig[elig.length-1]||MONSTERS[0];
+  const sc = 1+(level-1)*0.18;
+  return { ...base, hp:Math.round(base.baseHp*sc), maxHp:Math.round(base.baseHp*sc), xpReward:Math.round(base.xp*sc) };
+}
+function calcDmg(cls, combo) {
+  return (18 + cls.bonusDmg) + combo*4 + Math.floor(Math.random()*12);
+}
+function calcXpToLevel(lv) { return Math.round(100*Math.pow(1.4,lv-1)); }
+
+// ═══════════════════════════════════════════
+// BATTLE
+// ═══════════════════════════════════════════
+function loadBattle() {
+  G.monster = getMonster(G.level);
+  G.word    = randWord();
+  G.answers = shuffle(G.word.opts);
+  G.answering = false;
+  renderBattle();
+}
+
+function renderBattle() {
+  const { playerClass:cls, playerName:name, hp, maxHp, xp, xpToLevel, level, kills, combo, monster, word, answers } = G;
+
+  // Player
+  document.getElementById('p-name-display').textContent = `${cls.emoji} ${name}`;
+  document.getElementById('p-level-badge').textContent = `Lv.${level}`;
+  const hpEl = document.getElementById('p-hp-val');
+  hpEl.textContent = `${hp}/${maxHp}`;
+  hpEl.className = 'sval' + (hp < maxHp*.3?' low':'');
+  document.getElementById('p-hp-bar').style.width = `${(hp/maxHp)*100}%`;
+  document.getElementById('p-xp-val').textContent = `${xp}/${xpToLevel}`;
+  document.getElementById('p-xp-bar').style.width = `${(xp/xpToLevel)*100}%`;
+  const comboEl = document.getElementById('p-combo-badge');
+  if (combo>=2) { comboEl.style.display='inline-block'; comboEl.textContent=`🔥×${combo}`; }
+  else comboEl.style.display='none';
+
+  // Monster
+  document.getElementById('monster-emoji').textContent = monster.emoji;
+  document.getElementById('m-name').textContent = monster.name;
+  document.getElementById('m-hp-val').textContent = `❤️ ${monster.hp}/${monster.maxHp}`;
+  document.getElementById('m-hp-bar').style.width = `${(monster.hp/monster.maxHp)*100}%`;
+
+  // Word
+  document.getElementById('w-emoji').textContent = word.emoji;
+  document.getElementById('w-he').textContent = word.he;
+
+  // Answers
+  const ac = document.getElementById('answers-container');
+  ac.innerHTML = '';
+  answers.forEach(ans => {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-answer';
+    btn.textContent = ans;
+    btn.onclick = () => handleAnswer(ans, btn);
+    ac.appendChild(btn);
+  });
+
+  document.getElementById('battle-footer').textContent = `💀 ${kills} נוצחו · ${monster.name}`;
+}
+
+function handleAnswer(ans, btnEl) {
+  if (G.answering) return;
+  G.answering = true;
+
+  const correct = ans === G.word.en;
+  // Mark all buttons
+  document.querySelectorAll('#answers-container .btn-answer').forEach(b => {
+    b.disabled = true;
+    if (b.textContent===G.word.en) b.classList.add('correct');
+    else if (b===btnEl && !correct) b.classList.add('wrong');
+  });
+
+  if (correct) {
+    G.combo++;
+    const dmg = calcDmg(G.playerClass, G.combo);
+    showDmgPopup(`-${dmg}`, 'var(--green)', true);
+    shakeMonster();
+    const newMonHp = Math.max(0, G.monster.hp - dmg);
+    G.monster.hp = newMonHp;
+    document.getElementById('m-hp-bar').style.width = `${(newMonHp/G.monster.maxHp)*100}%`;
+    document.getElementById('m-hp-val').textContent = `❤️ ${newMonHp}/${G.monster.maxHp}`;
+
+    setTimeout(() => {
+      if (newMonHp <= 0) {
+        // Victory
+        const xpGained = G.monster.xpReward + G.combo*12;
+        G.xp += xpGained;
+        G.kills++;
+        let leveled = false;
+        if (G.xp >= G.xpToLevel) {
+          G.xp -= G.xpToLevel;
+          G.level++;
+          G.xpToLevel = calcXpToLevel(G.level);
+          G.maxHp += 10;
+          G.hp = Math.min(G.maxHp, G.hp + 25);
+          leveled = true;
+        }
+        showResult(true, xpGained, leveled);
+      } else {
+        nextWord();
+      }
+    }, 900);
+
+  } else {
+    G.combo = 0;
+    const dmg = 8 + Math.floor(Math.random()*12);
+    showDmgPopup(`-${dmg}`, 'var(--red)', false);
+    shakePlayer();
+    G.hp = Math.max(0, G.hp - dmg);
+    document.getElementById('p-hp-bar').style.width = `${(G.hp/G.maxHp)*100}%`;
+    document.getElementById('p-hp-val').textContent = `${G.hp}/${G.maxHp}`;
+    document.getElementById('p-combo-badge').style.display='none';
+
+    setTimeout(() => {
+      if (G.hp <= 0) {
+        showResult(false, 0, false);
+      } else {
+        nextWord();
+      }
+    }, 900);
+  }
+}
+
+function nextWord() {
+  G.word    = randWord();
+  G.answers = shuffle(G.word.opts);
+  G.answering = false;
+  // Update word display
+  document.getElementById('w-emoji').textContent = G.word.emoji;
+  document.getElementById('w-he').textContent = G.word.he;
+  // Rebuild answer buttons
+  const ac = document.getElementById('answers-container');
+  ac.innerHTML = '';
+  G.answers.forEach(ans => {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-answer';
+    btn.textContent = ans;
+    btn.onclick = () => handleAnswer(ans, btn);
+    ac.appendChild(btn);
+  });
+  // Update combo
+  const comboEl = document.getElementById('p-combo-badge');
+  if (G.combo>=2) { comboEl.style.display='inline-block'; comboEl.textContent=`🔥×${G.combo}`; }
+  else comboEl.style.display='none';
+}
+
+// ═══════════════════════════════════════════
+// ANIMATIONS
+// ═══════════════════════════════════════════
+function showDmgPopup(text, color, onMonster) {
+  const pop = document.createElement('div');
+  pop.className = 'dmg-popup';
+  pop.textContent = text;
+  pop.style.color = color;
+  const target = onMonster
+    ? document.getElementById('monster-emoji').parentElement
+    : document.getElementById('player-panel');
+  target.style.position='relative';
+  target.appendChild(pop);
+  setTimeout(()=>pop.remove(), 950);
+}
+
+function shakeMonster() {
+  const el = document.getElementById('monster-emoji');
+  el.classList.remove('monster-shake');
+  void el.offsetWidth;
+  el.classList.add('monster-shake');
+  setTimeout(()=>el.classList.remove('monster-shake'),400);
+}
+
+function shakePlayer() {
+  const el = document.getElementById('player-panel');
+  el.classList.remove('player-shake');
+  void el.offsetWidth;
+  el.classList.add('player-shake');
+  setTimeout(()=>el.classList.remove('player-shake'),400);
+}
+
+// ═══════════════════════════════════════════
+// RESULT SCREEN
+// ═══════════════════════════════════════════
+function showResult(won, xpGained, leveled) {
+  G.gameOver = !won;
+
+  if (won) {
+    document.getElementById('r-emoji').textContent = '🏆';
+    document.getElementById('r-title').style.color = 'var(--green)';
+    document.getElementById('r-title').textContent = 'ניצחון!';
+    document.getElementById('r-sub').innerHTML = `הכית את ה-<span style="color:var(--gold)">${G.monster.name}</span>!`;
+    if (leveled) {
+      document.getElementById('r-levelup').style.display='block';
+      document.getElementById('r-levelup-title').textContent = `עלית לרמה ${G.level}!`;
+    } else {
+      document.getElementById('r-levelup').style.display='none';
+    }
+    document.getElementById('r-rewards').innerHTML = `
+      <div class="reward-badge">
+        <span class="reward-val" style="color:var(--purple-light)">+${xpGained}</span>
+        <span class="reward-label">XP</span>
+      </div>
+      <div class="reward-badge">
+        <span class="reward-val" style="color:var(--gold)">${G.combo}×</span>
+        <span class="reward-label">Combo</span>
+      </div>
+      <div class="reward-badge">
+        <span class="reward-val" style="color:var(--orange)">${Math.floor(Math.random()*30)+15}</span>
+        <span class="reward-label">🪙 Gold</span>
+      </div>
+    `;
+    document.getElementById('r-btn').textContent = '⚔️  קרב הבא';
+  } else {
+    document.getElementById('r-emoji').textContent = '💀';
+    document.getElementById('r-title').style.color = 'var(--red)';
+    document.getElementById('r-title').textContent = 'נפלת בקרב';
+    document.getElementById('r-sub').innerHTML = `הגבורה של <span style="color:var(--gold)">${G.playerName}</span> תיזכר לנצח.`;
+    document.getElementById('r-levelup').style.display='none';
+    document.getElementById('r-rewards').innerHTML = `
+      <div class="reward-badge">
+        <span class="reward-val" style="color:var(--muted)">${G.level}</span>
+        <span class="reward-label">רמה</span>
+      </div>
+      <div class="reward-badge">
+        <span class="reward-val" style="color:var(--muted)">${G.kills}</span>
+        <span class="reward-label">💀 נוצחו</span>
+      </div>
+    `;
+    document.getElementById('r-btn').textContent = '🔄  נסה שוב';
+  }
+
+  showScreen('s-result');
+}
+
+function nextRound() {
+  if (G.gameOver) {
+    resetGame();
+    document.getElementById('name-input').value='';
+    showScreen('s-intro');
+  } else {
+    G.combo = 0;
+    loadBattle();
+    showScreen('s-battle');
+  }
+}
+</script>
+</body>
+</html>
